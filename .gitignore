@@ -1,0 +1,12 @@
+tools/*
+!tools/stlink-target.cfg
+build/
+evidence/
+backups/
+.venv/
+__pycache__/
+*.pyc
+*.zip
+.env
+.env.*
+
