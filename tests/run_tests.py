@@ -29,7 +29,7 @@ checks=struct.unpack('<I',u.mem_read(symbols['checks'],4))[0]
 report={'arm_control_checks':checks,'result':result,'returned':u.reg_read(UC_ARM_REG_PC)==0x0800fff0}
 blob=(root/'build/tracker.bin').read_bytes();sp,reset=struct.unpack_from('<II',blob)
 assert sp==0x20005000 and reset&1 and 0x08000000<=reset<0x08000000+len(blob)
-assert len(blob)<=63488  # Last two 1 KiB pages store the position journal.
+assert len(blob)<=63488  # The last two 1 KiB pages belong to the position journal.
 with (root/'build/tracker.elf').open('rb') as stream:
  elf=ELFFile(stream)
  for seg in elf.iter_segments():

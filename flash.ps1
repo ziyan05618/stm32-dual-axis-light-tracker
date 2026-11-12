@@ -41,7 +41,7 @@ try {
   if(-not (Test-Path -LiteralPath $file)) { throw ('Missing file: '+$file) }
  }
  $length = (Get-Item -LiteralPath $binary).Length
- if($length -lt 8 -or $length -gt 65536) { throw 'Firmware size is outside the STM32F103C8 Flash range.' }
+ if($length -lt 8 -or $length -gt 63488) { throw 'Firmware size overlaps reserved position-journal pages or exceeds available Flash.' }
  New-Item -ItemType Directory -Force backups,evidence,build | Out-Null
  $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
  $backup = 'backups/before-flash-'+$stamp+'-64KiB.bin'

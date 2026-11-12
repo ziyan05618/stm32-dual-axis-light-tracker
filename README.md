@@ -1,119 +1,58 @@
-# STM32 双轴追光控制器
+# STM32 双轴追光 · 丛雨主题
 
-基于 STM32F103C8T6、两台 28BYJ-48 步进电机、四路光敏采样和 ST7735 128×128 彩屏的双轴追光固件。使用裸机 C 和 GNU Arm 工具链，支持自动追光、按键手动控制、中文监测界面和角色互动动画。
+**v1.1.1 · 2026-11-12**
 
-![中文界面预览](docs/ui-preview-6x.png)
+修复手动短按方向键后松开会取消点动目标的问题：短按会完成一次预设点动，长按仍连续移动。保留已校准零点、停稳位置保存、上电慢速回中、双键回中和断电中断保护。固件已通过 ST-Link V2 写入主控，OpenOCD 校验与 Flash 回读 SHA-256 一致。首次启动显示“待校”，尚未设置物理零点。设置方式及限制见 [回中与零点](回中与零点.md)。
 
-v1.1.0 新增不加传感器的记忆位置回中：正常停稳后保存步数，下次开机慢速回到已校准零点；运动中断电则要求重新校准。首次使用需按下面的说明设置零点。
+当前固件：`prebuilt/tracker.bin`，60,844 字节；SHA-256：`EC026FF909C0595270D87B2B0510B2560C13F42B713C067929EAFABCA6E02935`。BIN 起始地址为 `0x08000000`，HEX 和 ELF 自带地址。最后两页 Flash 保留给位置日志；三种格式的校验和见 `prebuilt/SHA256SUMS`。
 
-## 功能
+## 界面和素材
 
-- 自动比较左右、上下亮度，通过死区和回差减少来回抖动；暗处停止追光。
-- 手动点按或按住控制左右、上下；回中结束后保持安全停机。
-- 保存已校准零点及停稳位置，上电延时回中；双键请求回中，任意新按键取消。
-- 运动前写入未完成标记，运动中断电不误用旧位置；存储校验失败要求重设零点。
-- 四路相对亮度、电池电压、估计电量和双轴相对位置显示。
-- 保留《千恋＊万花》丛雨主题与自定义昵称“女仆詹皓酱”，共 23 种状态反应。
-- 人物转向缓动、停下回弹、衣摆跟随、呼吸和渐变眨眼，动画目标更新间隔 60ms。
-- 分方向的限位提示约 1.05 秒后收起；另一轴运动优先显示，到头轴的位置数字变金色。
-- ST-Link 烧录前核对芯片、Flash 容量与读保护，备份原程序，写入后校验并回读 SHA-256。
+- 深紫底、淡金标题和浅绿色读数，左侧为《千恋＊万花》丛雨官方立绘的上半身，昵称为“女仆詹皓酱”；右侧显示四路光感。
+- 底部显示左右、上下位置和电池电压，电池百分比标明“估”。检测低于 1V 时显示占位符。
+- 动画目标间隔为 60ms。位移、倾斜和衣摆分别缓动，停下后轻微回弹并回中，眨眼和表情渐变过渡；保留待机呼吸、启动回应、暗处犯困、低电提醒、飘落花瓣与呼吸光点，详见 互动效果说明.md。数值变化时仅重画对应区域。
+- 碰到软件行程边界时，按方向提示“左到头啦／右到头啦／上到头啦／下到头啦”约 1.05 秒；保持按住越界方向不会一直重触发，提示结束后再次按下可提醒。另一轴运动时优先显示动作并清除旧提示。相应轴的位置数字变金色并显示短竖线，离开边界后恢复。
+- 背景占用 32768 字节 Flash，另有独立透明立绘、眼部表情和中文状态字模；无需网络、SD 卡或全屏 RAM 缓存。人物按 6 行分段合成绘制，主循环在小段之间继续处理按键、串口、采样和看门狗。
 
-![边界提示与跨轴动作演示](docs/ui-boundary-smooth-animation.gif)
+预览：[中文界面](docs/ui-preview.png)、[放大界面](docs/ui-preview-6x.png)、[待机与眨眼动画](docs/ui-idle-animation.gif)、[边界与跨轴缓动演示](docs/ui-boundary-smooth-animation.gif)、[完整状态](docs/ui-states-contact.png)、[23 种角色反应](docs/ui-reactions-contact.png)。预览由实际 ARM 指令生成并解码 ST7735 命令，采用演示数值，不是实时传感器截图。真实屏幕分辨率 128×128。
 
-预览由固件实际 ARM 指令的屏幕输出生成，使用演示数据，不是实时硬件截图。互动细节见 [互动效果说明](互动效果说明.md)，全部状态见 [状态对照图](docs/ui-states-contact.png)。
+立绘来自[《千恋＊万花》官方中文站](https://hikarifield.co.jp/senren/chara.html#chara03)，[原图](https://hikarifield.co.jp/senren/images/chara/chara03/cos01.png)。© YUZUSOFT / JUNOS / NekoNyan / HIKARI FIELD，素材权利归各权利人所有；按用户要求用于个人设备主题。assets/murasame_official.png 保留原图，来源和哈希在 assets/SOURCE.json。tests/gen_ui_assets.py 生成 src/ui_assets.h 和 assets/ui_background.rgb565。
 
-## 硬件与接线
+## 使用与供电
 
-| 功能 | 引脚或规格 |
+1. 首次上电显示“待校”，只允许手动运行。短按 S5 切模式；长按约 1.5 秒启动或停止。摆好初始姿态并停机后，同时按住 S1＋S3（左＋右）约 2.5 秒保存零点。
+2. 手动运行：S1 左、S2 下、S3 右、S4 上；点按请求 16 半步，按住超过 350ms 连续移动，松开停止。同轴相反两个键同时按下停止该轴。
+3. 自动运行每 100ms 比较左右、上下亮度；光线太暗或差值太小时停止。未接光敏板时读数通常接近 0，不主动转动。运行状态停止步进保持相位，安全状态关闭线圈。停稳约 0.5 秒后保存位置；下次上电延时约 1.5 秒回中，到零点后安全停机。
+4. 同时按住 S2＋S4（下＋上）约 1.5 秒可请求回中；准备阶段任意键取消，回中期间新按下任意键立即停止。运动中断电、首次安装或数据损坏会要求重新校准。
+5. ST-Link 供主控电不代表电机 VCC_5V 已供电。电机应先于或同时与主控供电。原理图 BAT1 接单节 3.7V 锂电池，经 SW1 与 U7 升压到 5V；按板上正负极接线。按用户先前照片方向，SW1 朝按键侧为接通。接回光敏板或电机前先断电。
+
+亮度 0–1000 是相对值，不是 lux；位置是步数，不是角度；电池百分比按 3000–4200mV 线性估计，不是校准过的容量。机构无机械限位检测；左右 ±768、上下 ±384 半步是软件范围。零点由用户校准，固件按已保存步数回中；失步、缺电和断电后碰动不能自动检测，需要主动重设零点。
+
+## 引脚
+
+| 功能 | 已核对引脚 |
 |---|---|
 | MCU | STM32F103C8T6，64KiB Flash / 20KiB RAM |
 | J1 / U2 电机 IN1..IN4 | PB3、PB8、PB1、PB0 |
 | J2 / U3 电机 IN1..IN4 | PB7、PB6、PB5、PB4 |
 | 光敏左 / 上 / 右 / 下 | PA0、PA1、PA2、PA3 |
-| 电池分压 | PA4，10kΩ / 10kΩ |
-| S1..S5 按键，低电平有效 | PA5、PA6、PA7、PA8、PA11 |
-| TFT SCK / MOSI / RESET / DC / CS / BL | PB10、PB11、PB12、PB13、PB14、PB15 |
-| USART1 TX / RX | PA9 / PA10，115200 8N1，3.3V 逻辑 |
-| SWDIO / SWCLK | PA13 / PA14，关闭 JTAG、保留 SWD |
+| 光敏 J4 的 1..5 脚 | GND、PA3、PA2、PA1、PA0 |
+| 电池分压 | PA4，R5/R6=10k/10k |
+| S1..S5 | PA5、PA6、PA7、PA8、PA11，低电平按下 |
+| TFT SCK/MOSI/RESET/DC/CS/BL | PB10、PB11、PB12、PB13、PB14、PB15 |
+| USART1 TX/RX | PA9/PA10，115200 8N1，3.3V 逻辑 |
+| SWDIO/SWCLK | PA13/PA14；关闭 JTAG，保留 SWD |
 
-光敏 J4 的 1..5 脚依次为 GND、PA3、PA2、PA1、PA0。电机必须由板上对应的驱动电路供电；ST-Link 给主控供电不代表电机 5V 电源已经接通。
+光敏板以元件面且 J4 位于左下为参照：RG1 左、RG2 上、RG3 右、RG4 下。U5 串口 1=5V、2=RXD(PA10)、3=TXD(PA9)、4=GND，5V 不可接 3.3V 或信号脚。
 
-位置单位是半步，亮度 0–1000 为相对值，电量百分比按电压粗估。左右 ±768、上下 ±384 半步是保守的软件范围，**没有机械限位传感器，也未标定实际最大角度**。零点需由用户校准，固件按保存的步数估计回中，不执行撞限位归零。电机失步、缺电运行和断电后被碰动不能自动检测，发生后必须重设零点。具体参数见 [tracker_config.h](src/tracker_config.h)。
+## 编译、验证、烧录
 
-## 使用
+需要 GNU Arm Embedded Toolchain 13.3.Rel1、Python 3.12，以及 `requirements-dev.txt` 中的测试依赖。运行 `tests/gen_ui_assets.py`，然后 `./build.ps1`、`tests/run_tests.py`、`tests/run_position_tests.py` 和 `tests/render_ui.py`。若编译器不在仓库默认的 `tools/arm-gnu/.../bin` 或系统 `PATH`，先设置 `$env:ARM_GNU_BIN` 指向包含 `arm-none-eabi-gcc.exe` 的 `bin` 目录。编译使用 `-Wall/-Wextra/-Werror`。公开仓库不包含工具链或 Python 虚拟环境。
 
-1. 首次开机显示“待校”。短按 S5 切换模式；长按约 1.5 秒启停。未校准时只允许手动运行。
-2. 手动运行时，S1 左、S2 下、S3 右、S4 上；点按请求 16 半步，按住超过 350ms 连续移动。同轴相反键同时按下停止该轴。
-3. 自动运行每 100ms 比较亮度。未接光敏板、环境过暗或亮度差很小时，电机不主动转动。
-4. 首次把机构调到期望初始姿态，长按 S5 停止，再同时按住 **S1＋S3（左＋右）约 2.5 秒**保存零点。
-5. 正常停稳约 0.5 秒后保存位置。下次开机延时约 1.5 秒慢速回中，到零点后进入安全停机；电机供电需先于或同时与主控接通。
-6. 同时按住 **S2＋S4（下＋上）约 1.5 秒**可随时请求回中，走到软件边界也能返回。准备阶段任意键取消，回中期间新按下任意键立即停止。
-7. 运动中突然断电、首次安装、记录损坏会提示“待校”；重新对齐后设零点。实际电机方向和光敏板安装方向仍需按机构确认。
+ARM 控制逻辑通过 10876 项检查，位置日志通过 2117 项检查，实际主程序状态通过 46 项检查；包含两页日志换页、每个提交阶段断电、校准按键、启动延时、边界回中、取消、计时回绕、超时和存储故障。UI 通过 157 项检查，保留 23 种互动并新增五种回中状态徽标。数值稳定时每帧动画传输 7374 字节，首次绘制 52207 字节。板上只读检查显示人物分段绘制最多 8ms、运行计时和界面持续刷新、采样故障及 Cortex-M3 故障均为 0。物理零点尚待用户设置，完整机械回中尚未实测。电机定时为 1ms SysTick，CPU 为 64MHz；正常运行开启独立看门狗。
 
-操作和限制详见 **[回中与零点](回中与零点.md)**。最后两页 Flash 留给位置日志，程序可用空间为 62 KiB。
+重新烧录可双击 Flash.cmd，也可在本目录运行 `./flash.ps1`。Flash.cmd 调用 Windows PowerShell，仅对本次进程使用 ExecutionPolicy Bypass，不修改系统执行策略。脚本核对芯片、Flash 和读保护，备份并校验原程序与选项字节，再写入、校验和回读比较 SHA-256，不自动解除读保护。如果固件尚未编译，脚本使用仓库内的 `prebuilt/` 版本。工具不在默认目录时，可设置 `OPENOCD_EXE` 指向 OpenOCD 可执行文件。运行证据随发布 ZIP 保存在 `evidence/`；`tests/check_runtime.py` 按当前 ELF 查找符号，只读检查状态，不暂停主控或启用电机。`tests/package_firmware.py` 校验构建、测试、运行证据和 Flash 回读属于同一版后生成交付 ZIP。
 
-![待校、准备、回中、安全及保存故障](docs/ui-home-states.png)
+已修复 Windows PowerShell 5.1 将 OpenOCD 正常 stderr 输出转换为 NativeCommandError、导致原脚本提前中断的问题。现在完整记录日志，并按 OpenOCD 退出码判断成败，真实错误仍会停止烧录；新日志统一为 UTF-8，验证脚本兼容历史 UTF-16 日志。最终脚本已在 Windows PowerShell 5.1 中从其他目录调用并完成实际备份、写入、校验和回读验证。公开仓库和交付 ZIP 均不含 OpenOCD 运行时；请单独安装，或设置 `OPENOCD_EXE`。
 
-串口命令：`STATUS`、`HELP`、`AUTO`、`MANUAL`、`ARM`、`STOP`、`HOME`、`LEFT`、`RIGHT`、`UP`、`DOWN`。安全状态下用 `ZERO` 保存当前零点；`REV PAN` / `REV TILT` 改方向后必须重新对齐并 `ZERO`，新方向随零点保存；`CAL` 在均匀亮光下校准，其光感偏移仅保存在 RAM。
-
-## 已编译固件与烧录
-
-[prebuilt](prebuilt) 包含已写入实物并回读验证的 BIN、HEX 和 ELF，以及 [SHA256SUMS](prebuilt/SHA256SUMS)。BIN 起始地址为 `0x08000000`。
-
-在 Windows 上下载 [xPack OpenOCD 0.12.0-7](https://github.com/xpack-dev-tools/openocd-xpack/releases/tag/v0.12.0-7)，解压为：
-
-```text
-tools/openocd/xpack-openocd-0.12.0-7/bin/openocd.exe
-```
-
-也可通过 `OPENOCD_EXE` 环境变量指定已有 OpenOCD，或将其加入 PATH。安装与你的 ST-Link 匹配的驱动并接好 SWD，然后双击 `Flash.cmd`。脚本优先使用 `build/` 的新编译固件；没有编译产物时使用 `prebuilt/`。
-
-PowerShell 也可运行：
-
-```powershell
-.lash.ps1
-```
-
-`Flash.cmd` 只对本次 PowerShell 进程使用执行策略参数，不修改系统策略。脚本兼容 Windows PowerShell 5.1 的 OpenOCD 正常 stderr 日志，通过退出码识别真实失败。备份与日志生成在 `backups/`、`evidence/`，不会被 Git 跟踪。
-
-## 从源码编译
-
-使用 [GNU Arm Toolchain 13.3.Rel1](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads) 的 Windows `arm-none-eabi` 版本。可以将工具链解压为：
-
-```text
-tools/arm-gnu/arm-gnu-toolchain-13.3.rel1-mingw-w64-i686-arm-none-eabi/bin/
-```
-
-也可将 `ARM_GNU_BIN` 指向工具链的 `bin` 目录，或将工具链加入 PATH，然后运行：
-
-```powershell
-.uild.ps1
-```
-
-输出为 `build/tracker.bin`、`tracker.hex`、`tracker.elf` 和链接映射文件。生成好的背景、中文字模和立绘数据已在 `src/`，正常编译不需要 Python。
-
-## 验证和修改素材
-
-需要 Python 3.12；生成中文素材和预览还使用 Windows 的微软雅黑字体。
-
-```powershell
-python -m venv .venv
-./.venv/Scripts/python.exe -m pip install -r requirements-dev.txt
-./.venv/Scripts/python.exe tests/run_tests.py
-./.venv/Scripts/python.exe tests/run_position_tests.py
-./.venv/Scripts/python.exe tests/render_ui.py
-```
-
-控制逻辑通过 10876 项 ARM 检查；另有 2117 项位置日志检查和 39 项实际主程序状态检查，覆盖写入每个阶段断电、日志换页、开机回中、双键校准、边界回中、取消、超时和存储失败。屏幕实际命令流通过 157 项状态与边缘检查，覆盖全部 23 种反应及回中状态。验证摘要在 [docs/validation.json](docs/validation.json)。固件已完成 ST-Link 写入、OpenOCD 校验和 Flash 回读一致性检查；物理零点需由用户现场校准，完整机械回中尚待装配后验证。
-
-修改提示文案、背景或人物素材后运行 `tests/gen_ui_assets.py`，再编译并验证。此脚本生成 `src/ui_assets.h` 和 `assets/ui_background.rgb565`；运行时不依赖网络或 SD 卡。
-
-## 目录
-
-- `src/`：主程序、控制、板级初始化、显示、互动动画与生成资源。
-- `tests/`：控制逻辑 ARM 仿真、屏幕输出验证与资源生成。
-- `assets/`：主题素材及来源记录。
-- `prebuilt/`：已验证固件与哈希。
-- `docs/`：动画、界面预览与验证摘要。
-
-角色素材与字体等第三方内容的权利归各权利人所有，来源和使用说明见 [NOTICE.md](NOTICE.md) 与 [assets/SOURCE.json](assets/SOURCE.json)。公开仓库未为第三方素材授予额外使用权。
+串口命令：STATUS/HELP 查看状态；AUTO/MANUAL 切模式；ARM 启用，STOP 或 S 停止；HOME 请求回中；LEFT/RIGHT/UP/DOWN 手动点动；ZERO 在安全状态保存当前姿态为零点；REV PAN/REV TILT 改方向后需要重新摆正并 ZERO，新方向随零点保存；CAL 在安全状态和均匀亮光下校准光感，仅光感偏移保存在 RAM。

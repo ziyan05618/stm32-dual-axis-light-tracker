@@ -63,6 +63,12 @@ int selftest(void)
  advance(1400u);CHECK(!g_enabled&&axes[0].position==16);
  advance(600u);CHECK(!g_returning&&!g_enabled&&axes[0].position==0&&!g_position_dirty);
  CHECK(position_store_load(&saved)==POSITION_CLEAN&&saved.pan==0);
+ /* A short directional press is a queued tap and completes after release. */
+ g_mode_auto=0u;arm();CHECK(g_enabled&&!g_mode_auto);
+ pin_keys(4u);advance(90u);CHECK(keys[2].stable);CHECK(g_position_dirty);
+ CHECK(axes[0].target==MANUAL_TAP_STEPS);
+ pin_keys(0u);advance(1200u);CHECK(axes[0].position==MANUAL_TAP_STEPS&&!axes[0].jog);
+ stop_motion();disarm();CHECK(save_position(1));CHECK(set_zero());
  /* Simultaneous opposite keys must not add a stray single-key tap. */
  g_mode_auto=0u;arm();pin_keys(5u);advance(100u);CHECK(axes[0].position==0);
  pin_keys(0u);advance(40u);disarm();

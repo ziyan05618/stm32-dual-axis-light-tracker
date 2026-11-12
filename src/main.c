@@ -172,8 +172,8 @@ static void poll_keys(uint32_t now)
  if(keys[1].stable&&keys[3].stable)tilt=0;
  if((can_move(0u,pan)||can_move(1u,tilt))&&!prepare_motion())return;
  uint32_t lock=irq_lock();
- if(keys[0].stable&&keys[2].stable)axis_stop(&axes[0]);else axis_jog(&axes[0],pan);
- if(keys[1].stable&&keys[3].stable)axis_stop(&axes[1]);else axis_jog(&axes[1],tilt);
+ if(keys[0].stable&&keys[2].stable)axis_stop(&axes[0]);else if(pan||axes[0].jog)axis_jog(&axes[0],pan);
+ if(keys[1].stable&&keys[3].stable)axis_stop(&axes[1]);else if(tilt||axes[1].jog)axis_jog(&axes[1],tilt);
  irq_restore(lock);
 }
 static void sample_sensors(void)
