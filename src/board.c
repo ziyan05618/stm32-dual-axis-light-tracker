@@ -1,4 +1,5 @@
 #include "board.h"
+#include "position_store.h"
 #define RCC_CR REG32(0x40021000u)
 #define RCC_CFGR REG32(0x40021004u)
 #define RCC_APB2ENR REG32(0x40021018u)
@@ -107,5 +108,39 @@ void board_watchdog_start(void)
  REG32(0x40003000u)=0xCCCCu;
 }
 void board_watchdog_feed(void){REG32(0x40003000u)=0xAAAAu;}
+
+/* STM32F1 half-word program / page erase sequence, matching ST's F1 HAL.
+ * Caller masks interrupts and ensures neither axis can step during the write. */
+#define FLASH_SR REG32(0x4002200Cu)
+#define FLASH_CR REG32(0x40022010u)
+static int flash_ready(void)
+{
+ for(uint32_t wait=0;FLASH_SR&1u;++wait)if(wait>=4000000u)return 0;
+ return (FLASH_SR&0x14u)==0u;
+}
+static int flash_open(void)
+{
+ if(FLASH_CR&0x80u){REG32(0x40022004u)=0x45670123u;REG32(0x40022004u)=0xCDEF89ABu;}
+ FLASH_SR=0x34u;
+ return !(FLASH_CR&0x80u)&&flash_ready();
+}
+uint16_t position_flash_read(uint32_t address){return *(volatile uint16_t *)address;}
+int position_flash_program(uint32_t address,uint16_t value)
+{
+ if(address<POSITION_FLASH_BASE||address>=POSITION_FLASH_END||(address&1u))return 0;
+ if(!flash_open())return 0;
+ FLASH_CR|=1u;*(volatile uint16_t *)address=value;
+ int ok=flash_ready();FLASH_CR=(FLASH_CR&~1u)|0x80u;
+ return ok&&position_flash_read(address)==value;
+}
+int position_flash_erase(uint32_t address)
+{
+ if(address<POSITION_FLASH_BASE||address>=POSITION_FLASH_END||(address&(POSITION_PAGE_BYTES-1u)))return 0;
+ if(!flash_open())return 0;
+ FLASH_CR|=2u;REG32(0x40022014u)=address;FLASH_CR|=0x40u;
+ int ok=flash_ready();FLASH_CR=(FLASH_CR&~2u)|0x80u;
+ if(ok)for(unsigned i=0;i<POSITION_PAGE_BYTES;i+=2u)if(position_flash_read(address+i)!=0xFFFFu)return 0;
+ return ok;
+}
 
 

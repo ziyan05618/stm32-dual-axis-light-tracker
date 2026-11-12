@@ -1,6 +1,7 @@
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 chars=''.join(dict.fromkeys('双轴追光模式自动手安全运行左右上下电池位置信度按键长启停请亮故障低量示毫伏估先居中再动机从启止传感器要调试准备就绪校准完方向反校电亮短换实时更新'))
+chars=''.join(dict.fromkeys(chars+'回存错待'))
 font_path='C:/Windows/Fonts/msyh.ttc'
 font=ImageFont.truetype(font_path,12)
 lines=['#ifndef FONTZH12_H','#define FONTZH12_H','#include <stdint.h>','typedef enum {']

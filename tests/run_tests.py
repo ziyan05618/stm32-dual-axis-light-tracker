@@ -29,12 +29,13 @@ checks=struct.unpack('<I',u.mem_read(symbols['checks'],4))[0]
 report={'arm_control_checks':checks,'result':result,'returned':u.reg_read(UC_ARM_REG_PC)==0x0800fff0}
 blob=(root/'build/tracker.bin').read_bytes();sp,reset=struct.unpack_from('<II',blob)
 assert sp==0x20005000 and reset&1 and 0x08000000<=reset<0x08000000+len(blob)
-assert len(blob)<=65536
+assert len(blob)<=63488  # Last two 1 KiB pages store the position journal.
 with (root/'build/tracker.elf').open('rb') as stream:
  elf=ELFFile(stream)
  for seg in elf.iter_segments():
   if seg['p_type']=='PT_LOAD' and seg['p_filesz']:
-   assert 0x08000000<=seg['p_paddr']<0x08010000
+   assert 0x08000000<=seg['p_paddr']<0x0800F800
+   assert seg['p_paddr']+seg['p_filesz']<=0x0800F800
    assert seg['p_paddr']+seg['p_filesz']<=0x08000000+len(blob)
 report['firmware_bytes']=len(blob);report['vector_and_load_addresses_valid']=True
 (root/'evidence/control-selftest.json').write_text(json.dumps(report,indent=2),encoding='utf-8')

@@ -81,7 +81,7 @@ class Screen:
         assert self.u.reg_read(UC_ARM_REG_PC) == 0x0800fff0, 'render did not return'
 
     def update(self, state, now):
-        self.u.mem_write(0x20001000, struct.pack('<5H2xii3BbbB2x', *state))
+        self.u.mem_write(0x20001000, struct.pack('<5H2xii3BbbBBx', *state))
         self.call('ui_render', 0x20001000, now)
 
     def render(self, state, now):
@@ -103,16 +103,16 @@ class Screen:
 REACTIONS = ('idle', 'hello', 'start', 'stop', 'manual', 'auto', 'left', 'right',
              'up', 'down', 'diagonal', 'dark', 'bright', 'aligned', 'low', 'empty',
              'recovered', 'limit_left', 'limit_right', 'limit_up', 'limit_down', 'fault', 'unknown')
-BASE = (684, 918, 752, 520, 3976, 0, 0, 0, 0, 0, 0, 0, 0)
+BASE = (684, 918, 752, 520, 3976, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
 
 def state(base=BASE, *, lights=None, battery=None, pan=None, tilt=None, automatic=None, enabled=None, fault=None,
-          pan_request=None, tilt_request=None, limit_attempts=None):
+          pan_request=None, tilt_request=None, limit_attempts=None, home_status=None):
     values = list(base)
     if lights is not None:
         values[:4] = lights
     for index, value in ((4, battery), (5, pan), (6, tilt), (7, automatic), (8, enabled), (9, fault),
-                         (10, pan_request), (11, tilt_request), (12, limit_attempts)):
+                         (10, pan_request), (11, tilt_request), (12, limit_attempts), (13, home_status)):
         if value is not None:
             values[index] = value
     return tuple(values)
@@ -136,7 +136,6 @@ def verify_frame(screen, value, now):
 
 
 def main():
-    (ROOT / 'evidence').mkdir(exist_ok=True)
     screen = Screen()
     verify_frame(screen, BASE, 0)
     initial_bytes = screen.bytes
@@ -306,7 +305,21 @@ def main():
     assert device.pixels == previous, 'text at screen edge wrapped'
     checks += 1
 
+    # Newly introduced boot / HOME badges must also redraw without residue.
+    home_device = Screen()
+    home_panels = []
+    for index, (caption, status) in enumerate((('待校准零点', 3), ('开机准备', 1), ('慢速回中', 2), ('安全待机', 0), ('保存故障', 4))):
+        value = state(home_status=status, enabled=int(status == 2), pan=120 if status == 2 else 0)
+        verify_frame(home_device, value, index * 120)
+        home_panels.append((caption, home_device.image()))
+        checks += 1
     font = ImageFont.truetype('C:/Windows/Fonts/msyh.ttc', 17)
+    home_sheet = Image.new('RGB', (5 * 256, 280), '#141122')
+    home_draw = ImageDraw.Draw(home_sheet)
+    for index, (caption, picture) in enumerate(home_panels):
+        home_draw.text((index * 256 + 8, 1), caption, font=font, fill='#e3c78c')
+        home_sheet.paste(picture.resize((256, 256), Image.Resampling.NEAREST), (index * 256, 24))
+    home_sheet.save(ROOT / 'evidence/ui-home-states.png')
     sheet = Image.new('RGB', (5 * 256, ((len(panels) + 4) // 5) * 280), '#141122')
     draw = ImageDraw.Draw(sheet)
     for index, (title, picture) in enumerate(panels):

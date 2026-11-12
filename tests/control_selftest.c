@@ -41,6 +41,27 @@ int selftest(void)
  axis_init(&a,32,1);a.last_step=UINT32_MAX-4;axis_move(&a,1);
  CHECK(axis_tick(&a,3,1)==0);
  CHECK(axis_tick(&a,4,1)==3 && a.position==1);
+ /* Return from both soft boundaries; target 0 must never be clamped outward. */
+ for(int sign=-1;sign<=1;sign+=2){
+  axis_init(&a,32,sign);a.position=sign*32;a.target=a.position;a.phase=5u;
+  axis_home(&a);CHECK(a.target==0&&a.jog==0&&a.min_interval==HOME_STEP_MS);
+  int32_t before=a.position;uint32_t last=0u;unsigned steps=0u;
+  for(uint32_t t=0;t<1000u;++t){
+   axis_tick(&a,t,1);
+   if(a.position!=before){
+    CHECK(a.position==before-sign);CHECK(t-last>=HOME_STEP_MS);
+    last=t;before=a.position;++steps;
+   }
+  }
+  CHECK(a.position==0&&steps==32u&&a.active);
+  axis_stop(&a);CHECK(a.min_interval==STEP_FAST_MS);
+ }
+ axis_init(&a,32,1);a.position=30;axis_home(&a);
+ for(uint32_t t=0;t<90u;++t)axis_tick(&a,t,1);
+ int32_t interrupted=a.position;CHECK(interrupted>0&&interrupted<30);
+ CHECK(axis_tick(&a,90u,0)==0u&&a.target==interrupted);
+ for(uint32_t t=91u;t<300u;++t)axis_tick(&a,t,0);
+ CHECK(a.position==interrupted); /* Stop cancels, it must never resume itself. */
  CHECK(track_direction(600,500,0)==1);
  CHECK(track_direction(500,600,0)==-1);
  CHECK(track_direction(540,500,0)==1);

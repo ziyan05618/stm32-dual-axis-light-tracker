@@ -256,9 +256,13 @@ void ui_render(const ui_state_t *state,uint32_t now)
 {
     if(!ready)display_restore(0u,0u,128u,128u);
     if(!ready||state->automatic!=previous.automatic)badge(62u,state->automatic?"自动":"手动",RGB(57u,49u,76u),GOLD);
-    if(!ready||state->enabled!=previous.enabled||state->adc_fault!=previous.adc_fault){
+    if(!ready||state->enabled!=previous.enabled||state->adc_fault!=previous.adc_fault||state->home_status!=previous.home_status){
         if(state->adc_fault)badge(94u,"故障",RGB(87u,40u,59u),RGB(255u,186u,191u));
+        else if(state->home_status==UI_HOME_FAULT)badge(94u,"存错",RGB(87u,40u,59u),RGB(255u,186u,191u));
+        else if(state->home_status==UI_HOME_RETURN)badge(94u,"回中",RGB(41u,66u,59u),MINT);
+        else if(state->home_status==UI_HOME_WAIT)badge(94u,"准备",RGB(51u,45u,65u),GOLD);
         else if(state->enabled)badge(94u,"运行",RGB(41u,66u,59u),MINT);
+        else if(state->home_status==UI_HOME_UNSET)badge(94u,"待校",RGB(51u,45u,65u),GOLD);
         else badge(94u,"安全",RGB(51u,45u,65u),RGB(188u,179u,207u));
     }
     for(unsigned i=0;i<4u;++i){if(!ready||state->light[i]!=previous.light[i])sensor(i,state->light[i]);}

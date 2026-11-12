@@ -1,16 +1,26 @@
 {
-  "verified_on": "2026-11-07",
-  "firmware_bytes": 57884,
-  "firmware_sha256": "EE62AD33E16A5515643FCC47F7975393FF15D0237508C8FE56877060483D72AA",
+  "verified_on": "2026-11-12",
+  "firmware_bytes": 60820,
+  "firmware_sha256": "26D2168B9A7440D024200C3F18249057B08551A237959E992F4AD225A7846ECA",
   "public_build_matches_flashed_firmware": true,
-  "arm_control_checks": 10739,
+  "arm_control_checks": 10876,
   "control_test_result": 0,
-  "ui_checks": 152,
+  "arm_position_journal_checks": 2117,
+  "arm_main_state_checks": 39,
+  "ui_checks": 157,
   "reaction_states": 23,
   "actual_arm_lcd_stream_validated": true,
   "directional_transient_limits_checked": true,
   "cross_axis_motion_at_limit_checked": true,
   "flash_verified_and_readback_matches": true,
   "source_matches_hardware_verified_version": true,
-  "scope": "Control and display logic checked with ARM emulation. Firmware flashed and read back through ST-Link. Mechanical travel and automatic tracking direction require validation on the assembled mechanism."
+  "runtime_advances": true,
+  "ui_advances": true,
+  "first_boot_uncalibrated_and_disarmed": true,
+  "position_journal_range": [
+    "0x0800F800",
+    "0x0800FFFF"
+  ],
+  "physical_home_motion_verified": false,
+  "scope": "Control, position storage, interrupted writes, boot return and button gestures checked with ARM emulation. Firmware flashed and read back through ST-Link. User must calibrate the physical zero; full mechanical return and tracking direction still require validation on the assembled mechanism."
 }

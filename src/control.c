@@ -5,9 +5,9 @@ void axis_init(volatile axis_t *a,int32_t limit,int8_t phase_sign)
 {
     a->position=0; a->target=0; a->last_step=0; a->limit=limit;
     a->jog=0; a->last_dir=0; a->phase_sign=phase_sign;
-    a->phase=0; a->active=0; a->ramp=STEP_START_MS;
+    a->phase=0; a->active=0; a->ramp=STEP_START_MS; a->min_interval=STEP_FAST_MS;
 }
-void axis_stop(volatile axis_t *a) { a->jog=0; a->target=a->position; a->last_dir=0; a->ramp=STEP_START_MS; }
+void axis_stop(volatile axis_t *a) { a->jog=0; a->target=a->position; a->last_dir=0; a->ramp=STEP_START_MS; a->min_interval=STEP_FAST_MS; }
 void axis_jog(volatile axis_t *a,int direction)
 {
     int8_t d=(int8_t)((direction>0)-(direction<0));
@@ -19,6 +19,10 @@ void axis_move(volatile axis_t *a,int32_t steps)
     if(steps>a->limit) steps=a->limit;
     if(steps < -a->limit) steps=-a->limit;
     a->target=clamp(a->target+steps,a->limit);
+}
+void axis_home(volatile axis_t *a)
+{
+    axis_stop(a);a->target=0;a->min_interval=HOME_STEP_MS;
 }
 uint8_t axis_tick(volatile axis_t *a,uint32_t now,int enabled)
 {
@@ -34,7 +38,7 @@ uint8_t axis_tick(volatile axis_t *a,uint32_t now,int enabled)
         if(a->jog) a->target=a->position;
         int electrical=dir*a->phase_sign;
         a->phase=(uint8_t)((a->phase+(electrical>0?1u:7u))&7u); a->active=1u;
-        if(a->ramp>STEP_FAST_MS) --a->ramp;
+        if(a->ramp>a->min_interval) --a->ramp;
     }
     return a->active?sequence[a->phase]:0u;
 }

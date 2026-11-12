@@ -6,7 +6,7 @@ LDFLAGS := -mcpu=cortex-m3 -mthumb -mfloat-abi=soft -nostdlib -Wl,--gc-sections 
 
 all: build/tracker.elf build/tracker.hex build/tracker.bin
 
-SOURCES := src/startup.S src/main.c src/board.c src/control.c src/display.c src/ui.c
+SOURCES := src/startup.S src/main.c src/board.c src/control.c src/position_store.c src/display.c src/ui.c
 HEADERS := $(wildcard src/*.h)
 
 build/tracker.elf: $(SOURCES) $(HEADERS) src/stm32f103c8.ld

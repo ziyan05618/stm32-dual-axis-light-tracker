@@ -13,7 +13,7 @@ $size=Join-Path $cc 'arm-none-eabi-size.exe'
 Push-Location $here
 try {
  New-Item -ItemType Directory -Force build | Out-Null
- $ccArgs=@('-mcpu=cortex-m3','-mthumb','-mfloat-abi=soft','-Os','-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror','-std=c11','-ffreestanding','-fno-builtin','-fno-unwind-tables','-fno-asynchronous-unwind-tables','-Isrc','src/startup.S','src/main.c','src/board.c','src/control.c','src/display.c','src/ui.c','-nostdlib','-Wl,--gc-sections','-Wl,-Map=build/tracker.map','-Tsrc/stm32f103c8.ld','-lgcc','-o','build/tracker.elf')
+ $ccArgs=@('-mcpu=cortex-m3','-mthumb','-mfloat-abi=soft','-Os','-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror','-std=c11','-ffreestanding','-fno-builtin','-fno-unwind-tables','-fno-asynchronous-unwind-tables','-Isrc','src/startup.S','src/main.c','src/board.c','src/control.c','src/position_store.c','src/display.c','src/ui.c','-nostdlib','-Wl,--gc-sections','-Wl,-Map=build/tracker.map','-Tsrc/stm32f103c8.ld','-lgcc','-o','build/tracker.elf')
  & $gcc @ccArgs
  if($LASTEXITCODE -ne 0){throw 'Firmware compile/link failed.'}
  & $objcopy -O ihex build/tracker.elf build/tracker.hex

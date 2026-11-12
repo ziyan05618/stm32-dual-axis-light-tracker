@@ -32,7 +32,7 @@
 #define LCD_Y_OFFSET 3u
 #define LCD_INVERT 0u
 #define LCD_RGB_ORDER 0u
-/* Conservative software travel caps, NOT measured stops. Zero=power-on pose. */
+/* Conservative software travel caps, NOT measured stops. Zero is user calibrated. */
 #define PAN_SOFT_LIMIT_STEPS 768
 #define TILT_SOFT_LIMIT_STEPS 384
 #define STEP_FAST_MS 4u
@@ -41,6 +41,12 @@
 #define MANUAL_HOLD_MS 350u
 #define KEY_DEBOUNCE_MS 25u
 #define MODE_LONG_PRESS_MS 1500u
+#define HOME_CHORD_MS 1500u
+#define ZERO_CHORD_MS 2500u
+#define HOME_START_DELAY_MS 1500u
+#define HOME_STEP_MS 8u
+#define HOME_TIMEOUT_MS 12000u
+#define POSITION_SETTLE_MS 500u
 #define TRACK_START_ERROR 40
 #define TRACK_STOP_ERROR 20
 #define TRACK_MIN_LIGHT 20u

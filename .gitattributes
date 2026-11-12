@@ -1,5 +1,5 @@
 # Preserve firmware bytes so SHA256SUMS is valid on every platform.
 prebuilt/*.bin -text
 prebuilt/*.elf -text
-prebuilt/*.hex -text
+prebuilt/*.hex -text -diff
 prebuilt/SHA256SUMS text eol=lf
